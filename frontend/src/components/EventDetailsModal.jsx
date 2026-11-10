@@ -6,8 +6,10 @@ export default function EventDetailsModal({
   event,
   onClose,
   onRegister,
+  onCancelRsvp,
   onEdit,
   onPromptAuth,
+  onOpenAttendees,
   registeringId
 }) {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -198,36 +200,57 @@ export default function EventDetailsModal({
         </div>
 
         {/* Footer */}
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
           {isAdmin && (
-            <button
-              onClick={() => {
-                onClose();
-                onEdit(event);
-              }}
-              className="btn-secondary"
-            >
-              Edit Event
-            </button>
+            <>
+              <button
+                onClick={() => onOpenAttendees(event)}
+                className="btn-secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                title="View registered attendees list"
+              >
+                <Users size={16} />
+                <span>Attendees ({registrationCount})</span>
+              </button>
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(event);
+                }}
+                className="btn-secondary"
+              >
+                Edit Event
+              </button>
+            </>
           )}
 
           {isUserRegistered ? (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.6rem 1.1rem',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: 700,
-                fontSize: '0.875rem',
-                background: '#ecfdf5',
-                color: '#059669',
-                border: '1px solid #a7f3d0'
-              }}
-            >
-              <BookmarkCheck size={18} />
-              <span>You are registered for this event!</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.55rem 0.95rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  background: '#ecfdf5',
+                  color: '#059669',
+                  border: '1px solid #a7f3d0'
+                }}
+              >
+                <BookmarkCheck size={17} />
+                <span>You are registered</span>
+              </div>
+              <button
+                onClick={() => onCancelRsvp(_id)}
+                className="btn-secondary"
+                style={{ color: '#ef4444', borderColor: '#fca5a5', fontSize: '0.825rem' }}
+                title="Cancel your RSVP"
+              >
+                Cancel RSVP
+              </button>
             </div>
           ) : (
             <button

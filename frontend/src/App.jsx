@@ -5,6 +5,7 @@ import FilterBar from './components/FilterBar';
 import EventCard from './components/EventCard';
 import EventDetailsModal from './components/EventDetailsModal';
 import EventFormModal from './components/EventFormModal';
+import AttendeesModal from './components/AttendeesModal';
 import AuthModal from './components/AuthModal';
 import Toast from './components/Toast';
 import { useAuth } from './context/AuthContext';
@@ -14,6 +15,7 @@ import {
   updateEvent,
   deleteEvent,
   registerForEvent,
+  cancelEventRsvp,
   getEventStats
 } from './services/api';
 import { CalendarX, Loader2, Sparkles, BookmarkCheck } from 'lucide-react';

@@ -1,5 +1,16 @@
 import React from 'react';
-import { Calendar, Clock, MapPin, User, Edit2, Trash2, ArrowRight, CheckCircle2, BookmarkCheck } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Edit2,
+  Trash2,
+  ArrowRight,
+  CheckCircle2,
+  BookmarkCheck,
+  Sparkles
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function EventCard({
@@ -11,7 +22,7 @@ export default function EventCard({
   onPromptAuth,
   registeringId
 }) {
-  const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
+  const { user, isAuthenticated, isAdmin } = useAuth();
 
   const {
     _id,
@@ -26,24 +37,22 @@ export default function EventCard({
     capacity,
     registrationCount = 0,
     status = 'Upcoming',
-    bannerUrl
+    bannerUrl,
+    isFeatured
   } = event;
 
-  // Format date
-  const eventDate = new Date(date);
-  const formattedDate = eventDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
+  // Format date components for floating date tile
+  const eventDateObj = new Date(date);
+  const monthStr = eventDateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const dayStr = eventDateObj.getDate();
+  const weekdayStr = eventDateObj.toLocaleDateString('en-US', { weekday: 'short' });
 
   const spotsRemaining = Math.max(0, capacity - registrationCount);
   const percentFilled = Math.min(100, Math.round((registrationCount / capacity) * 100));
   const isFull = spotsRemaining === 0;
   const isRegistering = registeringId === _id;
 
-  // Check if current logged-in user is already registered for this event
+  // Check if current user is already registered for this event
   const isUserRegistered =
     isAuthenticated &&
     user?.registeredEvents?.some((eId) => {
@@ -51,18 +60,29 @@ export default function EventCard({
       return idStr === _id;
     });
 
-  // Progress bar color based on fullness
-  const getProgressColor = () => {
-    if (percentFilled >= 100) return '#ef4444'; // Red
-    if (percentFilled >= 80) return '#f59e0b'; // Amber
-    return '#10b981'; // Green
+  // Dynamic progress gradient
+  const getProgressGradient = () => {
+    if (percentFilled >= 100) return 'linear-gradient(90deg, #ef4444, #dc2626)';
+    if (percentFilled >= 80) return 'linear-gradient(90deg, #f59e0b, #d97706)';
+    return 'linear-gradient(90deg, #6366f1, #8b5cf6)';
   };
 
-  // Fallback banner image if not provided
+  // Default high-res college event fallback banners by category
+  const categoryBanners = {
+    Hackathon: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=800&q=80',
+    Workshop: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80',
+    Cultural: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=800&q=80',
+    Technical: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+    Sports: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
+    Seminar: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=800&q=80'
+  };
+
   const defaultBanner =
+    categoryBanners[category] ||
     'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80';
 
-  const handleRsvpClick = () => {
+  const handleRsvpClick = (e) => {
+    e.stopPropagation();
     if (!isAuthenticated) {
       onPromptAuth('register');
       return;
@@ -71,150 +91,162 @@ export default function EventCard({
   };
 
   return (
-    <div className="event-card">
-      {/* Banner */}
-      <div
-        className="card-banner"
-        style={{
-          backgroundImage: `url(${bannerUrl && bannerUrl.startsWith('http') ? bannerUrl : defaultBanner})`
-        }}
-      >
-        <div className="card-banner-overlay">
-          <span className={`badge badge-${category || 'Other'}`}>{category}</span>
-          <span className={`status-badge status-${status}`}>{status}</span>
+    <div className="event-card-modern" onClick={() => onViewDetails(event)}>
+      {/* Banner Media Container */}
+      <div className="card-media-wrapper">
+        <img
+          src={bannerUrl && bannerUrl.startsWith('http') ? bannerUrl : defaultBanner}
+          alt={title}
+          className="card-media-img"
+          loading="lazy"
+        />
+        <div className="card-media-overlay" />
+
+        {/* Floating Calendar Date Badge */}
+        <div className="date-badge-floating">
+          <span className="date-month">{monthStr}</span>
+          <span className="date-day">{dayStr}</span>
+        </div>
+
+        {/* Top Right Badges */}
+        <div className="card-top-badges">
+          {isFeatured && (
+            <span className="badge-featured">
+              <Sparkles size={11} />
+              <span>Featured</span>
+            </span>
+          )}
+          <span className={`badge-pill badge-${category || 'Other'}`}>{category}</span>
+        </div>
+
+        {/* Bottom Venue Strip */}
+        <div className="card-media-footer">
+          <div className="venue-chip">
+            <MapPin size={13} />
+            <span>{venue}</span>
+          </div>
         </div>
       </div>
 
-      {/* Card Body */}
-      <div className="card-body">
-        <div className="card-department">{department}</div>
-        <h3 className="card-title" title={title}>
+      {/* Card Content */}
+      <div className="card-content-modern">
+        {/* Department & Status */}
+        <div className="card-header-row">
+          <span className="dept-tag">
+            <span className="dept-dot"></span>
+            {department}
+          </span>
+          <span className={`status-chip status-${status}`}>{status}</span>
+        </div>
+
+        {/* Title */}
+        <h3 className="event-title-modern" title={title}>
           {title}
         </h3>
-        <p className="card-desc">{description}</p>
 
-        {/* Metadata */}
-        <div className="card-meta-list">
-          <div className="card-meta-item">
-            <Calendar size={16} />
-            <span>{formattedDate}</span>
-          </div>
-          <div className="card-meta-item">
-            <Clock size={16} />
+        {/* Description snippet */}
+        <p className="event-desc-modern">{description}</p>
+
+        {/* Timing and Organizer */}
+        <div className="event-info-chips">
+          <div className="info-chip">
+            <Clock size={14} className="info-icon" />
             <span>{time}</span>
           </div>
-          <div className="card-meta-item">
-            <MapPin size={16} />
-            <span>{venue}</span>
-          </div>
-          <div className="card-meta-item">
-            <User size={16} />
-            <span>Organized by {organizer}</span>
+          <div className="info-chip">
+            <User size={14} className="info-icon" />
+            <span>By {organizer}</span>
           </div>
         </div>
 
-        {/* Capacity Bar */}
-        <div className="capacity-container">
-          <div className="capacity-labels">
-            <span>
-              {registrationCount} / {capacity} Registered
+        {/* Capacity Progress Bar */}
+        <div className="event-capacity-section">
+          <div className="capacity-meta-row">
+            <span className="capacity-count">
+              <strong>{registrationCount}</strong> / {capacity} seats
             </span>
-            <span style={{ color: isFull ? 'var(--danger)' : 'var(--text-muted)' }}>
-              {isFull ? 'Sold Out' : `${spotsRemaining} spots left`}
+            <span className={`capacity-status-text ${isFull ? 'full' : ''}`}>
+              {isFull ? 'Sold Out' : `${spotsRemaining} left (${percentFilled}%)`}
             </span>
           </div>
-          <div className="progress-bar-bg">
+          <div className="capacity-track">
             <div
-              className="progress-bar-fill"
+              className="capacity-fill"
               style={{
                 width: `${percentFilled}%`,
-                backgroundColor: getProgressColor()
+                background: getProgressGradient()
               }}
             />
           </div>
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="card-footer">
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          {/* Admin only: Edit and Delete buttons */}
+      {/* Card Action Footer */}
+      <div className="card-actions-modern" onClick={(e) => e.stopPropagation()}>
+        {/* Admin Actions */}
+        <div className="admin-actions-left">
           {isAdmin && (
             <>
               <button
-                onClick={() => onEdit(event)}
-                className="btn-card-action"
-                style={{ color: '#475569', background: '#f1f5f9' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(event);
+                }}
+                className="action-icon-btn edit"
                 title="Edit event"
                 aria-label="Edit event"
               >
-                <Edit2 size={15} />
+                <Edit2 size={14} />
               </button>
               <button
-                onClick={() => onDelete(_id, title)}
-                className="btn-card-action"
-                style={{ color: '#ef4444', background: '#fef2f2' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(_id, title);
+                }}
+                className="action-icon-btn delete"
                 title="Delete event"
                 aria-label="Delete event"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
               </button>
             </>
           )}
 
           <button
             onClick={() => onViewDetails(event)}
-            className="btn-card-action"
-            style={{ color: 'var(--text-main)', background: '#f1f5f9' }}
-            title="View details"
+            className="btn-details-link"
+            title="View full event details"
           >
             <span>Details</span>
           </button>
         </div>
 
-        {/* RSVP Button / Status */}
-        {isUserRegistered ? (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.45rem 0.85rem',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              background: '#ecfdf5',
-              color: '#059669',
-              border: '1px solid #a7f3d0'
-            }}
-          >
-            <BookmarkCheck size={15} />
-            <span>Registered</span>
-          </span>
-        ) : (
-          <button
-            onClick={handleRsvpClick}
-            disabled={isFull || status === 'Cancelled' || isRegistering}
-            className="btn-primary"
-            style={{
-              padding: '0.45rem 0.9rem',
-              fontSize: '0.8rem',
-              opacity: isFull || status === 'Cancelled' ? 0.6 : 1,
-              cursor: isFull || status === 'Cancelled' ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isRegistering ? (
-              'Registering...'
-            ) : isFull ? (
-              'Full'
-            ) : (
-              <>
-                <span>{isAuthenticated ? 'RSVP' : 'Sign In to RSVP'}</span>
-                <ArrowRight size={14} />
-              </>
-            )}
-          </button>
-        )}
+        {/* Primary RSVP Action */}
+        <div className="rsvp-action-right">
+          {isUserRegistered ? (
+            <div className="registered-badge-pill">
+              <BookmarkCheck size={14} />
+              <span>Registered</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleRsvpClick}
+              disabled={isFull || status === 'Cancelled' || isRegistering}
+              className={`btn-rsvp-primary ${isFull ? 'disabled' : ''}`}
+            >
+              {isRegistering ? (
+                'Saving...'
+              ) : isFull ? (
+                'Full'
+              ) : (
+                <>
+                  <span>{isAuthenticated ? 'RSVP' : 'RSVP Now'}</span>
+                  <ArrowRight size={14} className="arrow-rsvp" />
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
