@@ -8,6 +8,8 @@ const {
   updateEvent,
   deleteEvent,
   registerForEvent,
+  cancelRsvp,
+  getEventAttendees,
   getEventStats
 } = require('../controllers/eventController');
 
@@ -15,7 +17,7 @@ const {
   validateCreateEvent,
   validateUpdateEvent
 } = require('../middleware/validateEvent');
-const { optionalAuth } = require('../middleware/authMiddleware');
+const { protect, optionalAuth, authorize } = require('../middleware/authMiddleware');
 
 // Statistics route (must precede /:id)
 router.get('/stats', getEventStats);
@@ -34,5 +36,11 @@ router
 
 // Registration endpoint
 router.post('/:id/register', optionalAuth, registerForEvent);
+
+// Cancel RSVP endpoint
+router.post('/:id/cancel-rsvp', protect, cancelRsvp);
+
+// Attendee list endpoint (Admin only)
+router.get('/:id/attendees', protect, authorize('admin'), getEventAttendees);
 
 module.exports = router;

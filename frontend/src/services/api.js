@@ -169,6 +169,27 @@ export async function registerForEvent(id) {
 }
 
 /**
+ * Cancel RSVP for an event (Student / Attendee)
+ */
+export async function cancelEventRsvp(id) {
+  const res = await fetch(`${API_BASE}/events/${id}/cancel-rsvp`, {
+    method: 'POST',
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Get registered attendees for an event (Admin only)
+ */
+export async function getEventAttendees(id) {
+  const res = await fetch(`${API_BASE}/events/${id}/attendees`, {
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+}
+
+/**
  * Get portal analytics & summary stats
  */
 export async function getEventStats() {

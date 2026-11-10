@@ -92,6 +92,18 @@ const eventSchema = new mongoose.Schema(
       default: 0,
       min: [0, 'Registration count cannot be negative']
     },
+    attendees: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        registeredAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
     status: {
       type: String,
       enum: STATUSES,

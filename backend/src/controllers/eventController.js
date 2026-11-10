@@ -285,6 +285,13 @@ const registerForEvent = async (req, res, next) => {
 
     // Atomic increment
     event.registrationCount += 1;
+    if (req.user) {
+      if (!event.attendees) event.attendees = [];
+      event.attendees.push({
+        user: req.user._id,
+        registeredAt: new Date()
+      });
+    }
     await event.save();
 
     // Link event to student account if logged in
@@ -297,6 +304,100 @@ const registerForEvent = async (req, res, next) => {
       success: true,
       message: 'Registration successful!',
       data: event
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Cancel RSVP for an event
+ * @route   POST /api/events/:id/cancel-rsvp
+ * @access  Private
+ */
+const cancelRsvp = async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: `Event not found with id ${req.params.id}`
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Check if user is actually registered
+    const wasRegistered = req.user.registeredEvents.some(
+      (eId) => eId.toString() === event._id.toString()
+    );
+
+    if (!wasRegistered) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not registered for this event.'
+      });
+    }
+
+    // Decrement registration count safely
+    event.registrationCount = Math.max(0, event.registrationCount - 1);
+    if (event.attendees && Array.isArray(event.attendees)) {
+      event.attendees = event.attendees.filter(
+        (a) => a.user && a.user.toString() !== req.user._id.toString()
+      );
+    }
+    await event.save();
+
+    // Remove event from user's registeredEvents list
+    req.user.registeredEvents = req.user.registeredEvents.filter(
+      (eId) => eId.toString() !== event._id.toString()
+    );
+    await req.user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'RSVP cancelled successfully',
+      data: event
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get registered attendees for an event (Admin only)
+ * @route   GET /api/events/:id/attendees
+ * @access  Private (Admin)
+ */
+const getEventAttendees = async (req, res, next) => {
+  try {
+    const event = await Event.findById(req.params.id).populate(
+      'attendees.user',
+      'name email department studentId role'
+    );
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: `Event not found with id ${req.params.id}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        eventId: event._id,
+        eventTitle: event.title,
+        capacity: event.capacity,
+        totalRegistered: event.registrationCount,
+        attendees: event.attendees || []
+      }
     });
   } catch (error) {
     next(error);
@@ -348,5 +449,7 @@ module.exports = {
   updateEvent,
   deleteEvent,
   registerForEvent,
+  cancelRsvp,
+  getEventAttendees,
   getEventStats
 };
