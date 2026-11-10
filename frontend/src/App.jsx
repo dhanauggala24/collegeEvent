@@ -216,8 +216,8 @@ export default function App() {
 
       {/* Main Content */}
       <main className="container" style={{ flex: 1, paddingBottom: '3rem' }}>
-        {/* Statistics Bar */}
-        <StatsSummary stats={stats} totalFiltered={displayedEvents.length} />
+        {/* Statistics Bar - Hidden for student login */}
+        {!isStudent && <StatsSummary stats={stats} totalFiltered={displayedEvents.length} />}
 
         {/* Banner if My RSVPs Filter is Active */}
         {filterMyEvents && (
