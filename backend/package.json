@@ -1,0 +1,42 @@
+{
+  "name": "college-event-portal-backend",
+  "version": "1.0.0",
+  "description": "Production-ready backend API for College Event Portal",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/seed.js",
+    "test": "cross-env NODE_ENV=test jest --runInBand --detectOpenHandles --forceExit"
+  },
+  "keywords": [
+    "mern",
+    "express",
+    "mongodb",
+    "mongoose",
+    "events-portal",
+    "college"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.3",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
+  }
+}

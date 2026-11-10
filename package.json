@@ -1,0 +1,23 @@
+{
+  "name": "college-event-portal",
+  "version": "1.0.0",
+  "description": "Production-ready College Event Portal using the MERN stack (MongoDB, Express.js, React, Node.js)",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && npm run seed",
+    "test": "cd backend && npm test",
+    "build": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "mern",
+    "mongodb",
+    "express",
+    "react",
+    "nodejs",
+    "college-events"
+  ],
+  "author": "",
+  "license": "MIT"
+}
