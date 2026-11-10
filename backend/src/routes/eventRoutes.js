@@ -15,6 +15,7 @@ const {
   validateCreateEvent,
   validateUpdateEvent
 } = require('../middleware/validateEvent');
+const { optionalAuth } = require('../middleware/authMiddleware');
 
 // Statistics route (must precede /:id)
 router.get('/stats', getEventStats);
@@ -32,6 +33,6 @@ router
   .delete(deleteEvent);
 
 // Registration endpoint
-router.post('/:id/register', registerForEvent);
+router.post('/:id/register', optionalAuth, registerForEvent);
 
 module.exports = router;

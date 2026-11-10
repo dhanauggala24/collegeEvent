@@ -5,7 +5,9 @@ import FilterBar from './components/FilterBar';
 import EventCard from './components/EventCard';
 import EventDetailsModal from './components/EventDetailsModal';
 import EventFormModal from './components/EventFormModal';
+import AuthModal from './components/AuthModal';
 import Toast from './components/Toast';
+import { useAuth } from './context/AuthContext';
 import {
   getEvents,
   createEvent,
@@ -14,9 +16,11 @@ import {
   registerForEvent,
   getEventStats
 } from './services/api';
-import { CalendarX, Loader2, Sparkles } from 'lucide-react';
+import { CalendarX, Loader2, Sparkles, BookmarkCheck } from 'lucide-react';
 
 export default function App() {
+  const { user, isAuthenticated, isAdmin, isStudent, refreshUser } = useAuth();
+
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,11 +32,14 @@ export default function App() {
   const [department, setDepartment] = useState('All');
   const [upcomingOnly, setUpcomingOnly] = useState(true);
   const [sortBy, setSortBy] = useState('date');
+  const [filterMyEvents, setFilterMyEvents] = useState(false);
 
   // Modals & Popups
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState(null);
   const [detailEvent, setDetailEvent] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' or 'register'
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'info') => {
@@ -88,6 +95,16 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [loadEvents]);
 
+  // Filter events by registered IDs if "My RSVPs" is active
+  const displayedEvents = filterMyEvents
+    ? events.filter((e) =>
+        user?.registeredEvents?.some((reg) => {
+          const idStr = typeof reg === 'string' ? reg : reg?._id;
+          return idStr === e._id;
+        })
+      )
+    : events;
+
   // Handle Event Create or Update
   const handleSaveEvent = async (formData, id) => {
     try {
@@ -129,6 +146,12 @@ export default function App() {
 
   // Handle Register (RSVP)
   const handleRegisterEvent = async (id) => {
+    if (!isAuthenticated) {
+      setAuthModalMode('register');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     try {
       setRegisteringId(id);
       const res = await registerForEvent(id);
@@ -141,6 +164,8 @@ export default function App() {
       if (detailEvent?._id === id) {
         setDetailEvent(res.data);
       }
+      // Refresh current user profile so registeredEvents array is up to date
+      await refreshUser();
       loadStats();
     } catch (err) {
       showToast(err.message || 'Could not complete registration', 'error');
@@ -151,6 +176,16 @@ export default function App() {
 
   // Modal Triggers
   const handleOpenCreateModal = () => {
+    if (!isAuthenticated) {
+      showToast('Please sign in as a Faculty Admin to publish events.', 'info');
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+      return;
+    }
+    if (!isAdmin) {
+      showToast('Only Faculty Admins can create events.', 'error');
+      return;
+    }
     setEventToEdit(null);
     setIsFormModalOpen(true);
   };
@@ -164,15 +199,59 @@ export default function App() {
     setDetailEvent(event);
   };
 
+  const handleOpenAuthModal = (mode = 'login') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Navigation Header */}
-      <Navbar onOpenCreateModal={handleOpenCreateModal} />
+      <Navbar
+        onOpenCreateModal={handleOpenCreateModal}
+        onOpenAuthModal={handleOpenAuthModal}
+        filterMyEvents={filterMyEvents}
+        onToggleMyEvents={() => setFilterMyEvents((prev) => !prev)}
+      />
 
       {/* Main Content */}
       <main className="container" style={{ flex: 1, paddingBottom: '3rem' }}>
         {/* Statistics Bar */}
-        <StatsSummary stats={stats} totalFiltered={events.length} />
+        <StatsSummary stats={stats} totalFiltered={displayedEvents.length} />
+
+        {/* Banner if My RSVPs Filter is Active */}
+        {filterMyEvents && (
+          <div
+            style={{
+              background: 'var(--primary-light)',
+              border: '1px solid #c7d2fe',
+              borderRadius: 'var(--radius-md)',
+              padding: '0.85rem 1.25rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <BookmarkCheck size={20} color="var(--primary)" />
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary-text)' }}>
+                Showing your RSVP'd events ({displayedEvents.length})
+              </span>
+            </div>
+            <button
+              onClick={() => setFilterMyEvents(false)}
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: 'var(--primary)',
+                textDecoration: 'underline'
+              }}
+            >
+              Show All Events
+            </button>
+          </div>
+        )}
 
         {/* Filter Bar */}
         <FilterBar
@@ -191,23 +270,43 @@ export default function App() {
         {/* Events Section */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '5rem 0', color: 'var(--text-muted)' }}>
-            <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 1rem', color: 'var(--primary)', animation: 'spin 1s linear infinite' }} />
+            <Loader2
+              size={36}
+              style={{
+                margin: '0 auto 1rem',
+                color: 'var(--primary)',
+                animation: 'spin 1s linear infinite'
+              }}
+            />
             <p style={{ fontWeight: 600 }}>Loading college events...</p>
           </div>
-        ) : events.length === 0 ? (
+        ) : displayedEvents.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">
               <CalendarX size={32} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-              No Events Found
+              {filterMyEvents ? 'No RSVPs Yet' : 'No Events Found'}
             </h3>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 1.5rem', fontSize: '0.9rem' }}>
-              {search || category !== 'All' || department !== 'All'
+            <p
+              style={{
+                color: 'var(--text-muted)',
+                maxWidth: '420px',
+                margin: '0 auto 1.5rem',
+                fontSize: '0.9rem'
+              }}
+            >
+              {filterMyEvents
+                ? "You haven't registered for any events yet. Explore upcoming hackathons, fests, and workshops and click RSVP!"
+                : search || category !== 'All' || department !== 'All'
                 ? "We couldn't find any events matching your filter criteria. Try resetting filters or searching with different keywords."
                 : 'No college events are currently scheduled. Be the first to publish an event!'}
             </p>
-            {search || category !== 'All' || department !== 'All' ? (
+            {filterMyEvents ? (
+              <button onClick={() => setFilterMyEvents(false)} className="btn-primary">
+                Explore All Events
+              </button>
+            ) : search || category !== 'All' || department !== 'All' ? (
               <button
                 onClick={() => {
                   setSearch('');
@@ -219,16 +318,20 @@ export default function App() {
               >
                 Clear All Filters
               </button>
-            ) : (
+            ) : isAdmin ? (
               <button onClick={handleOpenCreateModal} className="btn-primary">
                 <Sparkles size={16} />
                 <span>Publish First Event</span>
+              </button>
+            ) : (
+              <button onClick={() => handleOpenAuthModal('login')} className="btn-secondary">
+                Sign In as Admin to Create Events
               </button>
             )}
           </div>
         ) : (
           <div className="events-grid">
-            {events.map((event) => (
+            {displayedEvents.map((event) => (
               <EventCard
                 key={event._id}
                 event={event}
@@ -236,6 +339,7 @@ export default function App() {
                 onEdit={handleOpenEditModal}
                 onDelete={handleDeleteEvent}
                 onRegister={handleRegisterEvent}
+                onPromptAuth={handleOpenAuthModal}
                 registeringId={registeringId}
               />
             ))}
@@ -244,7 +348,16 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid var(--border)', background: '#ffffff', padding: '1.5rem 0', textAlign: 'center', fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+      <footer
+        style={{
+          borderTop: '1px solid var(--border)',
+          background: '#ffffff',
+          padding: '1.5rem 0',
+          textAlign: 'center',
+          fontSize: '0.825rem',
+          color: 'var(--text-muted)'
+        }}
+      >
         <div className="container">
           <p>© 2026 CampusConnect • Production-Ready College Event Portal (MERN Stack)</p>
         </div>
@@ -263,16 +376,20 @@ export default function App() {
         onClose={() => setDetailEvent(null)}
         onRegister={handleRegisterEvent}
         onEdit={handleOpenEditModal}
+        onPromptAuth={handleOpenAuthModal}
         registeringId={registeringId}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+        onNotify={showToast}
       />
 
       {/* Toast notifications */}
       {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

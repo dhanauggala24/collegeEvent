@@ -5,6 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const eventRoutes = require('./routes/eventRoutes');
+const authRoutes = require('./routes/authRoutes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -54,6 +55,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 
 // Catch 404 and forward to error handler

@@ -1,6 +1,29 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
+ * Get stored auth token
+ */
+export function getAuthToken() {
+  return localStorage.getItem('portal_token') || '';
+}
+
+/**
+ * Save auth session
+ */
+export function setAuthSession(token, user) {
+  if (token) localStorage.setItem('portal_token', token);
+  if (user) localStorage.setItem('portal_user', JSON.stringify(user));
+}
+
+/**
+ * Clear auth session
+ */
+export function clearAuthSession() {
+  localStorage.removeItem('portal_token');
+  localStorage.removeItem('portal_user');
+}
+
+/**
  * Handle HTTP response and throw friendly error messages
  */
 async function handleResponse(response) {
@@ -19,6 +42,59 @@ async function handleResponse(response) {
 }
 
 /**
+ * Helper to get default headers with optional auth Bearer token
+ */
+function getHeaders(extraHeaders = {}) {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders
+  };
+}
+
+// ----------------- AUTHENTICATION APIS -----------------
+
+/**
+ * Register new user (Student or Admin)
+ */
+export async function registerUser(userData) {
+  const res = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Login user (Student or Admin)
+ */
+export async function loginUser(credentials) {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials)
+  });
+  return handleResponse(res);
+}
+
+/**
+ * Get current user profile
+ */
+export async function getCurrentUser() {
+  const token = getAuthToken();
+  if (!token) return null;
+
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: getHeaders()
+  });
+  return handleResponse(res);
+}
+
+// ----------------- EVENT APIS -----------------
+
+/**
  * Get all events with optional filters & query params
  */
 export async function getEvents(params = {}) {
@@ -30,7 +106,9 @@ export async function getEvents(params = {}) {
   });
 
   const url = `${API_BASE}/events${query.toString() ? `?${query.toString()}` : ''}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: getHeaders()
+  });
   return handleResponse(res);
 }
 
@@ -38,50 +116,54 @@ export async function getEvents(params = {}) {
  * Get event details by ID
  */
 export async function getEventById(id) {
-  const res = await fetch(`${API_BASE}/events/${id}`);
+  const res = await fetch(`${API_BASE}/events/${id}`, {
+    headers: getHeaders()
+  });
   return handleResponse(res);
 }
 
 /**
- * Create a new event
+ * Create a new event (Admin)
  */
 export async function createEvent(eventData) {
   const res = await fetch(`${API_BASE}/events`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(eventData)
   });
   return handleResponse(res);
 }
 
 /**
- * Update existing event
+ * Update existing event (Admin)
  */
 export async function updateEvent(id, eventData) {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(eventData)
   });
   return handleResponse(res);
 }
 
 /**
- * Delete an event
+ * Delete an event (Admin)
  */
 export async function deleteEvent(id) {
   const res = await fetch(`${API_BASE}/events/${id}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getHeaders()
   });
   return handleResponse(res);
 }
 
 /**
- * Register attendee for an event
+ * Register attendee for an event (Student / Attendee)
  */
 export async function registerForEvent(id) {
   const res = await fetch(`${API_BASE}/events/${id}/register`, {
-    method: 'POST'
+    method: 'POST',
+    headers: getHeaders()
   });
   return handleResponse(res);
 }
@@ -90,6 +172,8 @@ export async function registerForEvent(id) {
  * Get portal analytics & summary stats
  */
 export async function getEventStats() {
-  const res = await fetch(`${API_BASE}/events/stats`);
+  const res = await fetch(`${API_BASE}/events/stats`, {
+    headers: getHeaders()
+  });
   return handleResponse(res);
 }

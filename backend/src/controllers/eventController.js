@@ -270,9 +270,28 @@ const registerForEvent = async (req, res, next) => {
       });
     }
 
+    // Check if user is logged in and already registered
+    if (req.user && req.user.registeredEvents) {
+      const alreadyRegistered = req.user.registeredEvents.some(
+        (eId) => eId.toString() === event._id.toString()
+      );
+      if (alreadyRegistered) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already registered for this event!'
+        });
+      }
+    }
+
     // Atomic increment
     event.registrationCount += 1;
     await event.save();
+
+    // Link event to student account if logged in
+    if (req.user) {
+      req.user.registeredEvents.push(event._id);
+      await req.user.save();
+    }
 
     res.status(200).json({
       success: true,

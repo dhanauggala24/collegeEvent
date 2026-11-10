@@ -1,13 +1,17 @@
 import React from 'react';
-import { X, Calendar, Clock, MapPin, User, Mail, Users, Tag, CheckCircle2 } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, User, Mail, Users, Tag, CheckCircle2, BookmarkCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function EventDetailsModal({
   event,
   onClose,
   onRegister,
   onEdit,
+  onPromptAuth,
   registeringId
 }) {
+  const { user, isAuthenticated, isAdmin } = useAuth();
+
   if (!event) return null;
 
   const {
@@ -38,6 +42,22 @@ export default function EventDetailsModal({
   const spotsRemaining = Math.max(0, capacity - registrationCount);
   const isFull = spotsRemaining === 0;
   const isRegistering = registeringId === _id;
+
+  const isUserRegistered =
+    isAuthenticated &&
+    user?.registeredEvents?.some((eId) => {
+      const idStr = typeof eId === 'string' ? eId : eId?._id;
+      return idStr === _id;
+    });
+
+  const handleRsvpClick = () => {
+    if (!isAuthenticated) {
+      onClose();
+      onPromptAuth('register');
+      return;
+    }
+    onRegister(_id);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -179,27 +199,55 @@ export default function EventDetailsModal({
 
         {/* Footer */}
         <div className="modal-footer">
-          <button
-            onClick={() => {
-              onClose();
-              onEdit(event);
-            }}
-            className="btn-secondary"
-          >
-            Edit Event
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => {
+                onClose();
+                onEdit(event);
+              }}
+              className="btn-secondary"
+            >
+              Edit Event
+            </button>
+          )}
 
-          <button
-            onClick={() => onRegister(_id)}
-            disabled={isFull || status === 'Cancelled' || isRegistering}
-            className="btn-primary"
-            style={{
-              opacity: isFull || status === 'Cancelled' ? 0.6 : 1,
-              cursor: isFull || status === 'Cancelled' ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isRegistering ? 'Registering...' : isFull ? 'Event is Full' : 'Register / RSVP Now'}
-          </button>
+          {isUserRegistered ? (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.6rem 1.1rem',
+                borderRadius: 'var(--radius-md)',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                background: '#ecfdf5',
+                color: '#059669',
+                border: '1px solid #a7f3d0'
+              }}
+            >
+              <BookmarkCheck size={18} />
+              <span>You are registered for this event!</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleRsvpClick}
+              disabled={isFull || status === 'Cancelled' || isRegistering}
+              className="btn-primary"
+              style={{
+                opacity: isFull || status === 'Cancelled' ? 0.6 : 1,
+                cursor: isFull || status === 'Cancelled' ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isRegistering
+                ? 'Registering...'
+                : isFull
+                ? 'Event is Full'
+                : isAuthenticated
+                ? 'Register / RSVP Now'
+                : 'Sign In to RSVP'}
+            </button>
+          )}
         </div>
       </div>
     </div>

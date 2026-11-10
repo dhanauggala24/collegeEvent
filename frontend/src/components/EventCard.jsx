@@ -1,5 +1,6 @@
 import React from 'react';
-import { Calendar, Clock, MapPin, User, Edit2, Trash2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Edit2, Trash2, ArrowRight, CheckCircle2, BookmarkCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function EventCard({
   event,
@@ -7,8 +8,11 @@ export default function EventCard({
   onEdit,
   onDelete,
   onRegister,
+  onPromptAuth,
   registeringId
 }) {
+  const { user, isAuthenticated, isAdmin, isStudent } = useAuth();
+
   const {
     _id,
     title,
@@ -39,6 +43,14 @@ export default function EventCard({
   const isFull = spotsRemaining === 0;
   const isRegistering = registeringId === _id;
 
+  // Check if current logged-in user is already registered for this event
+  const isUserRegistered =
+    isAuthenticated &&
+    user?.registeredEvents?.some((eId) => {
+      const idStr = typeof eId === 'string' ? eId : eId?._id;
+      return idStr === _id;
+    });
+
   // Progress bar color based on fullness
   const getProgressColor = () => {
     if (percentFilled >= 100) return '#ef4444'; // Red
@@ -47,7 +59,16 @@ export default function EventCard({
   };
 
   // Fallback banner image if not provided
-  const defaultBanner = 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80';
+  const defaultBanner =
+    'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80';
+
+  const handleRsvpClick = () => {
+    if (!isAuthenticated) {
+      onPromptAuth('register');
+      return;
+    }
+    onRegister(_id);
+  };
 
   return (
     <div className="event-card">
@@ -117,24 +138,30 @@ export default function EventCard({
       {/* Footer Actions */}
       <div className="card-footer">
         <div style={{ display: 'flex', gap: '0.4rem' }}>
-          <button
-            onClick={() => onEdit(event)}
-            className="btn-card-action"
-            style={{ color: '#475569', background: '#f1f5f9' }}
-            title="Edit event"
-            aria-label="Edit event"
-          >
-            <Edit2 size={15} />
-          </button>
-          <button
-            onClick={() => onDelete(_id, title)}
-            className="btn-card-action"
-            style={{ color: '#ef4444', background: '#fef2f2' }}
-            title="Delete event"
-            aria-label="Delete event"
-          >
-            <Trash2 size={15} />
-          </button>
+          {/* Admin only: Edit and Delete buttons */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => onEdit(event)}
+                className="btn-card-action"
+                style={{ color: '#475569', background: '#f1f5f9' }}
+                title="Edit event"
+                aria-label="Edit event"
+              >
+                <Edit2 size={15} />
+              </button>
+              <button
+                onClick={() => onDelete(_id, title)}
+                className="btn-card-action"
+                style={{ color: '#ef4444', background: '#fef2f2' }}
+                title="Delete event"
+                aria-label="Delete event"
+              >
+                <Trash2 size={15} />
+              </button>
+            </>
+          )}
+
           <button
             onClick={() => onViewDetails(event)}
             className="btn-card-action"
@@ -145,28 +172,49 @@ export default function EventCard({
           </button>
         </div>
 
-        <button
-          onClick={() => onRegister(_id)}
-          disabled={isFull || status === 'Cancelled' || isRegistering}
-          className="btn-primary"
-          style={{
-            padding: '0.45rem 0.9rem',
-            fontSize: '0.8rem',
-            opacity: isFull || status === 'Cancelled' ? 0.6 : 1,
-            cursor: isFull || status === 'Cancelled' ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {isRegistering ? (
-            'Registering...'
-          ) : isFull ? (
-            'Full'
-          ) : (
-            <>
-              <span>RSVP</span>
-              <ArrowRight size={14} />
-            </>
-          )}
-        </button>
+        {/* RSVP Button / Status */}
+        {isUserRegistered ? (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.45rem 0.85rem',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              background: '#ecfdf5',
+              color: '#059669',
+              border: '1px solid #a7f3d0'
+            }}
+          >
+            <BookmarkCheck size={15} />
+            <span>Registered</span>
+          </span>
+        ) : (
+          <button
+            onClick={handleRsvpClick}
+            disabled={isFull || status === 'Cancelled' || isRegistering}
+            className="btn-primary"
+            style={{
+              padding: '0.45rem 0.9rem',
+              fontSize: '0.8rem',
+              opacity: isFull || status === 'Cancelled' ? 0.6 : 1,
+              cursor: isFull || status === 'Cancelled' ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {isRegistering ? (
+              'Registering...'
+            ) : isFull ? (
+              'Full'
+            ) : (
+              <>
+                <span>{isAuthenticated ? 'RSVP' : 'Sign In to RSVP'}</span>
+                <ArrowRight size={14} />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

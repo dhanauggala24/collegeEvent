@@ -1,6 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { Event } = require('./models/Event');
+const { User } = require('./models/User');
 const { connectDB } = require('./config/db');
 
 const sampleEvents = [
@@ -108,16 +109,48 @@ const sampleEvents = [
   }
 ];
 
+const sampleUsers = [
+  {
+    name: 'Dr. Alan Turing',
+    email: 'admin@college.edu',
+    password: 'Password123',
+    role: 'admin',
+    department: 'Computer Science',
+    studentId: ''
+  },
+  {
+    name: 'Sarah Jenkins',
+    email: 'student@college.edu',
+    password: 'Password123',
+    role: 'student',
+    department: 'Computer Science',
+    studentId: 'CS2026-104'
+  }
+];
+
 const seedDB = async () => {
   try {
     await connectDB();
-    console.log('[Seed] Clearing existing events...');
+    console.log('[Seed] Clearing existing events and users...');
     await Event.deleteMany({});
+    await User.deleteMany({});
 
     console.log('[Seed] Inserting sample college events...');
-    await Event.insertMany(sampleEvents);
+    const createdEvents = await Event.insertMany(sampleEvents);
 
-    console.log(`[Seed] Successfully seeded ${sampleEvents.length} events!`);
+    console.log('[Seed] Inserting sample admin & student users...');
+    for (const u of sampleUsers) {
+      // Create users individually so pre-save password hash hook executes
+      const user = new User(u);
+      if (u.role === 'student' && createdEvents.length > 0) {
+        user.registeredEvents = [createdEvents[0]._id];
+      }
+      await user.save();
+    }
+
+    console.log(`[Seed] Successfully seeded ${sampleEvents.length} events and ${sampleUsers.length} users!`);
+    console.log('[Seed] Admin login:   admin@college.edu / Password123');
+    console.log('[Seed] Student login: student@college.edu / Password123');
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {
